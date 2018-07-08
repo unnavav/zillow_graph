@@ -152,13 +152,12 @@ rent_annualized$tag <- "rent"
 home_annualized$tag <- "home"
 
 zillow_annualized <- bind_rows(home_annualized, rent_annualized)
-
-zillow_annualized$d_1213 <- (zillow_annualized$`2013` - zillow_annualized$`2012`)/
-  zillow_annualized$`2012`
-zillow_annualized$d_1314 <- (zillow_annualized$`2014` - zillow_annualized$`2013`)/
-  zillow_annualized$`2013`
-zillow_annualized$d_1415 <- (zillow_annualized$`2015` - zillow_annualized$`2013`)/
-  zillow_annualized$`2013`
+zillow_annualized <- zillow_annualized[,c(1:10, length(zillow_annualized),
+                                          11:(length(zillow_annualized)-1))]
+zillow_annualized <- zillow_annualized %>% gather(year, val, 
+                                                  12:length(zillow_annualized)) %>%
+  group_by(FIPS, year) %>%
+  mutate(d_val = (val-lag(val))/lag(val))
 
 # WE DID IT YEAH LET'S ALL GO HAVE A PARTY
 
