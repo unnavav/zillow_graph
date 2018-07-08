@@ -1,8 +1,19 @@
-# turning Zillow data into real data, annualizing.
-
+###############################################################################
+# Annualizing Zillow & Cleaning
+# Vaasavi Unnava
+# 
+# Zillow's data is not in real 2016 US dollars, which is what the rest of our
+# dataset uses. So we have to deflate the prices. Since our census data is on
+# an annual level, we want to take the simple means of our monthly property 
+# data to annualize it so that we have the appropriate census data to input 
+# into the model.
+# 
+# I'll also be appending the county adjacency data onto this dataset as well.
+# 
+###############################################################################
 
 # intializing the environment
-# rm(list = ls())
+rm(list = ls())
 
 library(data.table)
 library(dplyr)
@@ -63,3 +74,26 @@ zillow_wide <- zillow_long %>% spread(year, property_value)
 zillow_annualized <- inner_join(id_data, zillow_wide, 
                                 by = c("SizeRank" = "SizeRank")) %>%
   select(-c("V1"))
+
+# making sure that leading zeroes stay in the FIPS codes
+zillow_annualized$CountyFIPS <- zillow_annualized$CountyFIPS %>% as.character()
+zillow_annualized$StateFIPS <- zillow_annualized$StateFIPS %>% as.character()
+zillow_annualized$MunicipalCodeFIPS <- zillow_annualized$MunicipalCodeFIPS %>% 
+  as.character()
+
+zillow_annualized$CountyFIPS <- zillow_annualized$CountyFIPS %>%
+  sapply(str_pad, width = 3, side = "left", pad = "0")
+zillow_annualized$StateFIPS <- zillow_annualized$StateFIPS %>%
+  sapply(str_pad, width = 2, side = "left", pad = "0")
+zillow_annualized$MunicipalCodeFIPS <- zillow_annualized$MunicipalCodeFIPS %>%
+  sapply(str_pad, width = 2, side = "left", pad = "0")
+zillow_annualized$FIPS <- zillow_annualized$FIPS %>%
+  sapply(str_pad, width = 5, side = "left", pad = "0")
+
+# WE DID IT YEAH LET'S ALL GO HAVE A PARTY
+
+# saving the data....
+
+setwd(paste0(home_dir, "/data/output"))
+
+write.csv(zillow_annualized, "zillow_annualized.csv")
