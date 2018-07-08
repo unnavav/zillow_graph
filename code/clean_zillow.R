@@ -36,8 +36,8 @@ cpi$cpi_2016 <- cpi$cpi_2010/(cpi[cpi$date == as.Date("2016-01-01"),]$cpi_2010)
 
 setwd(paste0(home_dir, "/data/output"))
 
-zillow_dat <- fread("zillow_with_FIPS.csv")
-zillow_dat <- zillow_dat[,1:71]
+zillow_rent_dat <- fread("zillow_homes_with_FIPS.csv")
+zillow_rent_dat <- zillow_rent_dat[,1:71]
 
 # we want to loop through the each month that Zillow has and divide it by the 
 # relevant CPI scale for that month. 
@@ -45,17 +45,17 @@ zillow_dat <- zillow_dat[,1:71]
 # matrices are actually just vectors, so I treat the matrix of property values
 # as one long vector to be divided by the cpi for each obs
 
-cpi_repped <- rep(cpi$cpi_2016, nrow(zillow_dat))
+cpi_repped <- rep(cpi$cpi_2016, nrow(zillow_rent_dat))
 
-zillow_dat[,12:ncol(zillow_dat)] <- zillow_dat[,12:ncol(zillow_dat)]/cpi_repped
+zillow_rent_dat[,12:ncol(zillow_rent_dat)] <- zillow_rent_dat[,12:ncol(zillow_rent_dat)]/cpi_repped
 
 # finally, time to annualize data.
 
 # holding id data I don't want to mess around with right now
-id_data <- zillow_dat[,1:11]
+id_data <- zillow_home_dat[,1:11]
 
 # getting just property value data
-zillow_raw <- zillow_dat[,11:length(zillow_dat)]
+zillow_raw <- zillow_home_dat[,11:length(zillow_home_dat)]
 
 # turn to long from wide so I can get yearly averages
 zillow_long <- gather(zillow_raw, month, property_value, 2:length(zillow_raw))
@@ -71,24 +71,94 @@ zillow_wide <- zillow_long %>% spread(year, property_value)
 
 # merge back onto original ID data
 
-zillow_annualized <- inner_join(id_data, zillow_wide, 
+home_annualized <- inner_join(id_data, zillow_wide, 
                                 by = c("SizeRank" = "SizeRank")) %>%
   select(-c("V1"))
 
 # making sure that leading zeroes stay in the FIPS codes
-zillow_annualized$CountyFIPS <- zillow_annualized$CountyFIPS %>% as.character()
-zillow_annualized$StateFIPS <- zillow_annualized$StateFIPS %>% as.character()
-zillow_annualized$MunicipalCodeFIPS <- zillow_annualized$MunicipalCodeFIPS %>% 
+home_annualized$CountyFIPS <- home_annualized$CountyFIPS %>% as.character()
+home_annualized$StateFIPS <- home_annualized$StateFIPS %>% as.character()
+home_annualized$MunicipalCodeFIPS <- home_annualized$MunicipalCodeFIPS %>% 
   as.character()
 
-zillow_annualized$CountyFIPS <- zillow_annualized$CountyFIPS %>%
+home_annualized$CountyFIPS <- home_annualized$CountyFIPS %>%
   sapply(str_pad, width = 3, side = "left", pad = "0")
-zillow_annualized$StateFIPS <- zillow_annualized$StateFIPS %>%
+home_annualized$StateFIPS <- home_annualized$StateFIPS %>%
   sapply(str_pad, width = 2, side = "left", pad = "0")
-zillow_annualized$MunicipalCodeFIPS <- zillow_annualized$MunicipalCodeFIPS %>%
+home_annualized$MunicipalCodeFIPS <- home_annualized$MunicipalCodeFIPS %>%
   sapply(str_pad, width = 2, side = "left", pad = "0")
-zillow_annualized$FIPS <- zillow_annualized$FIPS %>%
+home_annualized$FIPS <- home_annualized$FIPS %>%
   sapply(str_pad, width = 5, side = "left", pad = "0")
+
+# Again, but with rental data: 
+
+zillow_rent_dat <- fread("zillow_rents_with_FIPS.csv")
+zillow_rent_dat <- zillow_rent_dat[,1:71]
+
+# we want to loop through the each month that Zillow has and divide it by the 
+# relevant CPI scale for that month. 
+# because looping hurts and would take forever, perform matrix operation. we know
+# matrices are actually just vectors, so I treat the matrix of property values
+# as one long vector to be divided by the cpi for each obs
+
+cpi_repped <- rep(cpi$cpi_2016, nrow(zillow_rent_dat))
+
+zillow_rent_dat[,12:ncol(zillow_rent_dat)] <- zillow_rent_dat[,12:ncol(zillow_rent_dat)]/cpi_repped
+
+# finally, time to annualize data.
+
+# holding id data I don't want to mess around with right now
+id_data <- zillow_rent_dat[,1:11]
+
+# getting just property value data
+zillow_raw <- zillow_rent_dat[,11:length(zillow_rent_dat)]
+
+# turn to long from wide so I can get yearly averages
+zillow_long <- gather(zillow_raw, month, property_value, 2:length(zillow_raw))
+
+zillow_long <- zillow_long %>% 
+  mutate(year = substr(month, 1,4),
+         year = as.numeric(year)) %>%
+  group_by(SizeRank, year) %>%
+  summarise(property_value = mean(property_value, na.rm = T)) %>%
+  filter(year < 2016)
+
+zillow_wide <- zillow_long %>% spread(year, property_value)
+
+# merge back onto original ID data
+
+rent_annualized <- inner_join(id_data, zillow_wide, 
+                                by = c("SizeRank" = "SizeRank")) %>%
+  select(-c("V1"))
+
+# making sure that leading zeroes stay in the FIPS codes
+rent_annualized$CountyFIPS <- rent_annualized$CountyFIPS %>% as.character()
+rent_annualized$StateFIPS <- rent_annualized$StateFIPS %>% as.character()
+rent_annualized$MunicipalCodeFIPS <- rent_annualized$MunicipalCodeFIPS %>% 
+  as.character()
+
+rent_annualized$CountyFIPS <- rent_annualized$CountyFIPS %>%
+  sapply(str_pad, width = 3, side = "left", pad = "0")
+rent_annualized$StateFIPS <- rent_annualized$StateFIPS %>%
+  sapply(str_pad, width = 2, side = "left", pad = "0")
+rent_annualized$MunicipalCodeFIPS <- rent_annualized$MunicipalCodeFIPS %>%
+  sapply(str_pad, width = 2, side = "left", pad = "0")
+rent_annualized$FIPS <- rent_annualized$FIPS %>%
+  sapply(str_pad, width = 5, side = "left", pad = "0")
+
+# combining the two datasets:
+
+rent_annualized$tag <- "rent"
+home_annualized$tag <- "home"
+
+zillow_annualized <- bind_rows(home_annualized, rent_annualized)
+
+zillow_annualized$d_1213 <- (zillow_annualized$`2013` - zillow_annualized$`2012`)/
+  zillow_annualized$`2012`
+zillow_annualized$d_1314 <- (zillow_annualized$`2014` - zillow_annualized$`2013`)/
+  zillow_annualized$`2013`
+zillow_annualized$d_1415 <- (zillow_annualized$`2015` - zillow_annualized$`2013`)/
+  zillow_annualized$`2013`
 
 # WE DID IT YEAH LET'S ALL GO HAVE A PARTY
 
