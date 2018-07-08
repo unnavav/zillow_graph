@@ -18,9 +18,15 @@ home_dir <- "/Users/vunnava/Dropbox/FRB/PSS Summer School/final project/"
 # Getting data ready for merge ----
 # Reading in the datasets
 
-zillow_dat <- fread(paste0(home_dir,"/data/input/County_Zhvi_AllHomes.csv"))
-adjacencies <- fread(paste0(home_dir, "/data/input/county_adjacency.txt"))
-crosswalk <- fread(paste0(home_dir, "/data/input/CountyCrosswalk_Zillow.csv"))
+# had to subset the data for zillow, as it wasn't reading in all the columns 
+# we needed o/w
+
+zillow_dat <- fread(paste0(home_dir,
+                           "/data/input/County_Zhvi_AllHomes_subsetted.csv"))
+adjacencies <- fread(paste0(home_dir, 
+                            "/data/input/county_adjacency.txt"))
+crosswalk <- fread(paste0(home_dir, 
+                          "/data/input/CountyCrosswalk_Zillow.csv"))
 
 # Adding var names to our bb txt file
 
